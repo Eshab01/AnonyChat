@@ -1,0 +1,26 @@
+# AnonyChat Proprietary License
+
+Copyright (2025) Eshab Sachan  
+All rights reserved.  
+
+## 1. License Grant  
+This software, known as "AnonyChat," is the intellectual property of Eshab Sachan. You are granted a **limited, non-exclusive, non-transferable, and revocable** license to use this software **for personal and educational purposes only**.  
+
+## 2. Restrictions  
+You **MAY NOT**:  
+- Copy, modify, or distribute this software, in whole or in part, without prior written permission from the author.  
+- Use this software for commercial purposes without a separate commercial license agreement.  
+- Reverse engineer, decompile, or attempt to extract the source code.  
+- Remove or modify any copyright notices.  
+
+## 3. Commercial Use  
+If you wish to use AnonyChat for commercial purposes, you must obtain explicit written permission from the author.  
+
+## 4. Warranty Disclaimer  
+This software is provided **"as is"**, without warranties of any kind. The author is not liable for any damages, data loss, or legal issues arising from the use of this software.  
+
+## 5. Termination  
+If you violate any of these terms, your license to use this software is automatically revoked.  
+
+For licensing inquiries, contact: **eshabsa@gmail.com**  
+
