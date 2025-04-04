@@ -32,9 +32,15 @@ export function useChatSocketHandlers(
           ]
         }));
       
-        if (!prevState.privateRoom) {  
-          setTimeout(() => newSocket.findPartner(), 2000);
-        }
+        setTimeout(() => {
+          // Fix: Using proper state reference by using setState callback
+          setState(prevState => {
+            if (!prevState.privateRoom) {  
+              newSocket.findPartner();
+            }
+            return prevState;
+          });
+        }, 2000);
       }, 1500);
       
     });
@@ -99,9 +105,17 @@ export function useChatSocketHandlers(
           },
           messages: [
             ...prevState.messages,
-            createMessage(`Private room created with code: ${data.roomCode}. Waiting for someone to join...`, 'system', 'system')
+            createMessage(`Private room created with code: ${data.roomCode}. Share this code with someone to start chatting!`, 'system', 'system')
           ]
         }));
+        
+        // Display toast with room code for easy copying
+        toast.success(
+          <div className="flex flex-col">
+            <span>Room created! Share this code:</span>
+            <span className="font-bold text-lg select-all mt-1">{data.roomCode}</span>
+          </div>
+        );
       } else {
         toast.error("Failed to create private room. Please try again.");
       }
@@ -117,9 +131,12 @@ export function useChatSocketHandlers(
           },
           messages: [
             ...prevState.messages,
-            createMessage(`You've joined private room: ${data.roomCode}. Waiting for connection...`, 'system', 'system')
+            createMessage(`You've joined private room: ${data.roomCode}. Connecting to chat partner...`, 'system', 'system')
           ]
         }));
+        
+        // Force find a partner when joining a room
+        setTimeout(() => newSocket.findPartner(), 1000);
       } else {
         toast.error(data.error || "Failed to join private room. Please check the code and try again.");
         // Reset the connecting state since we failed to join
@@ -127,6 +144,23 @@ export function useChatSocketHandlers(
           ...prevState,
           isConnecting: false
         }));
+      }
+    });
+    
+    // Add connection status event
+    newSocket.on('connection-status', (status) => {
+      setState(prevState => ({
+        ...prevState,
+        messages: [
+          ...prevState.messages,
+          createMessage(status.message, 'system', 'system')
+        ]
+      }));
+      
+      if (status.type === 'error') {
+        toast.error(status.message);
+      } else if (status.type === 'info') {
+        toast.info(status.message);
       }
     });
     

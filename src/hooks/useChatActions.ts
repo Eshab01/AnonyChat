@@ -168,6 +168,25 @@ export function useChatActions(
     }
   }, [socket, state.currentUser, setState, setSocket, setupSocketHandlers]);
   
+  // Add method to retry connection
+  const retryConnection = useCallback(() => {
+    if (socket) {
+      setState(prevState => ({
+        ...prevState,
+        isConnecting: true,
+        messages: [
+          ...prevState.messages,
+          createMessage('Retrying connection...', 'system', 'system')
+        ]
+      }));
+      
+      socket.retryConnection();
+    } else {
+      // If no socket, initialize chat first
+      initializeChat();
+    }
+  }, [socket, setState, initializeChat]);
+  
   return {
     sendMessage,
     sendTypingIndicator,
@@ -175,6 +194,7 @@ export function useChatActions(
     reportPartner,
     createPrivateRoom,
     joinPrivateRoom,
-    initializeChat
+    initializeChat,
+    retryConnection
   };
 }

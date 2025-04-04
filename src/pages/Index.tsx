@@ -6,7 +6,7 @@ import ChatWindow from "@/components/ChatWindow";
 import EncryptionIndicator from "@/components/EncryptionIndicator";
 import { Button } from "@/components/ui/button";
 import { useChat } from "@/hooks/useChat";
-import { X } from "lucide-react";
+import { RefreshCw, X } from "lucide-react";
 
 const Index = () => {
   const [chatStarted, setChatStarted] = useState(false);
@@ -15,13 +15,15 @@ const Index = () => {
     currentUser,
     partner,
     isTyping,
+    isConnecting,
     privateRoom,
     initializeChat,
     sendMessage,
     sendTypingIndicator,
     disconnect,
     reportPartner,
-    joinPrivateRoom
+    joinPrivateRoom,
+    retryConnection
   } = useChat();
 
   const handleStartChat = () => {
@@ -38,6 +40,12 @@ const Index = () => {
     disconnect();
     setChatStarted(false);
   };
+
+  // Check if waiting for connection more than 10 seconds
+  const isConnectionStalled = !partner && messages.some(msg => 
+    msg.type === 'system' && 
+    msg.content.includes('Finding a chat partner')
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -60,6 +68,20 @@ const Index = () => {
             onReport={reportPartner}
             privateRoom={privateRoom}
           />
+          
+          {/* Show retry button when connection is stalled */}
+          {isConnectionStalled && !isConnecting && (
+            <Button 
+              variant="secondary"
+              size="sm"
+              onClick={retryConnection}
+              className="fixed top-20 right-4 rounded-full animate-pulse shadow-md"
+              disabled={isConnecting}
+            >
+              <RefreshCw className="h-4 w-4 mr-1 animate-spin-slow" />
+              Find Partner
+            </Button>
+          )}
           
           <Button 
             variant="destructive"

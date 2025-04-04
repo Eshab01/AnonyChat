@@ -30,7 +30,8 @@ export function useChat() {
     reportPartner,
     createPrivateRoom,
     joinPrivateRoom,
-    initializeChat
+    initializeChat,
+    retryConnection
   } = useChatActions(state, setState, socket, setSocket, setupSocketHandlers);
   
   return {
@@ -41,6 +42,7 @@ export function useChat() {
     disconnect,
     reportPartner,
     createPrivateRoom,
-    joinPrivateRoom
+    joinPrivateRoom,
+    retryConnection
   };
 }
