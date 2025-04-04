@@ -109,13 +109,8 @@ export function useChatSocketHandlers(
           ]
         }));
         
-        // Display toast with room code for easy copying
-        toast.success(
-          <div className="flex flex-col">
-            <span>Room created! Share this code:</span>
-            <span className="font-bold text-lg select-all mt-1">{data.roomCode}</span>
-          </div>
-        );
+        // Display toast with room code for easy copying - using simple string instead of JSX
+        toast.success(`Room created! Share this code: ${data.roomCode}`);
       } else {
         toast.error("Failed to create private room. Please try again.");
       }
