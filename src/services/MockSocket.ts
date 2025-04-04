@@ -9,8 +9,13 @@ export class MockSocket {
   private connectionRetries: number = 0;
   private maxRetries: number = 3;
   private isConnecting: boolean = false;
+  private currentUserId: string | null = null;
+  private currentRoomCode: string | null = null;
   
   constructor() {
+    // Generate a unique ID for this socket instance
+    this.currentUserId = generateId();
+    
     setTimeout(() => {
       this.emit('connect');
     }, 1000);
@@ -45,6 +50,10 @@ export class MockSocket {
           );
         }
       }, 500 + Math.random() * 1000);
+    } else if (event === 'message' && this.currentRoomCode && !this.partnerId) {
+      // Store the message in the room for when someone joins
+      // This is a simplified implementation - in a real app, you'd store these in a database
+      console.log(`Message sent in private room ${this.currentRoomCode} with no partner yet`);
     }
     
     if (event === 'typing') {
@@ -52,12 +61,12 @@ export class MockSocket {
         clearTimeout(this.typingTimeout);
       }
       
-      if (args[0] === true && this.callbacks['partner-typing']) {
+      if (args[0] === true && this.callbacks['partner-typing'] && this.partnerId) {
         this.callbacks['partner-typing'].forEach(callback => callback(true));
       }
       
       this.typingTimeout = setTimeout(() => {
-        if (this.callbacks['partner-typing']) {
+        if (this.callbacks['partner-typing'] && this.partnerId) {
           this.callbacks['partner-typing'].forEach(callback => callback(false));
         }
       }, 3000);
@@ -66,7 +75,8 @@ export class MockSocket {
     // Handle private room creation
     if (event === 'create-private-room') {
       const roomCode = args[0];
-      this.privateRooms.set(roomCode, [generateId()]); // Initialize with creator
+      this.privateRooms.set(roomCode, [this.currentUserId || generateId()]); // Initialize with creator
+      this.currentRoomCode = roomCode;
       
       if (this.callbacks['room-created']) {
         this.callbacks['room-created'].forEach(callback => 
@@ -76,15 +86,78 @@ export class MockSocket {
           })
         );
       }
+      
+      // Add system messages about the room
+      if (this.callbacks['connection-status']) {
+        this.callbacks['connection-status'].forEach(callback => 
+          callback({
+            type: 'info',
+            message: 'Private room created. Waiting for someone to join...'
+          })
+        );
+      }
     }
     
     // Handle joining private room
     if (event === 'join-private-room') {
       const roomCode = args[0];
+      this.currentRoomCode = roomCode;
+      
       setTimeout(() => {
         if (this.privateRooms.has(roomCode)) {
-          this.partnerId = generateId();
-          this.privateRooms.get(roomCode)?.push(this.partnerId);
+          const existingUsers = this.privateRooms.get(roomCode) || [];
+          
+          if (existingUsers.length > 0 && existingUsers[0] !== this.currentUserId) {
+            // Someone else is already in the room, connect them
+            this.partnerId = existingUsers[0];
+            
+            // Add this user to the room
+            existingUsers.push(this.currentUserId || generateId());
+            this.privateRooms.set(roomCode, existingUsers);
+            
+            if (this.callbacks['room-joined']) {
+              this.callbacks['room-joined'].forEach(callback => 
+                callback({
+                  roomCode,
+                  success: true
+                })
+              );
+            }
+            
+            // Simulate finding a partner
+            setTimeout(() => {
+              if (this.callbacks['partner-found']) {
+                this.callbacks['partner-found'].forEach(callback => 
+                  callback({
+                    id: this.partnerId,
+                    temporaryName: generateTemporaryName()
+                  })
+                );
+              }
+            }, 1500);
+          } else {
+            // No one else is in the room or it's the same user
+            if (this.callbacks['room-joined']) {
+              this.callbacks['room-joined'].forEach(callback => 
+                callback({
+                  roomCode,
+                  success: true
+                })
+              );
+            }
+            
+            if (this.callbacks['connection-status']) {
+              this.callbacks['connection-status'].forEach(callback => 
+                callback({
+                  type: 'info',
+                  message: 'You joined the private room. Waiting for someone else to join...'
+                })
+              );
+            }
+          }
+        } else {
+          // Room doesn't exist yet, create it
+          this.privateRooms.set(roomCode, [this.currentUserId || generateId()]);
           
           if (this.callbacks['room-joined']) {
             this.callbacks['room-joined'].forEach(callback => 
@@ -95,25 +168,11 @@ export class MockSocket {
             );
           }
           
-          // Simulate finding a partner
-          setTimeout(() => {
-            if (this.callbacks['partner-found']) {
-              this.callbacks['partner-found'].forEach(callback => 
-                callback({
-                  id: this.partnerId,
-                  temporaryName: generateTemporaryName()
-                })
-              );
-            }
-          }, 1500);
-        } else {
-          // Room doesn't exist
-          if (this.callbacks['room-joined']) {
-            this.callbacks['room-joined'].forEach(callback => 
+          if (this.callbacks['connection-status']) {
+            this.callbacks['connection-status'].forEach(callback => 
               callback({
-                roomCode,
-                success: false,
-                error: "Room not found"
+                type: 'info',
+                message: 'Room created. Waiting for someone to join...'
               })
             );
           }
@@ -127,6 +186,22 @@ export class MockSocket {
   disconnect() {
     this.isConnecting = false;
     this.connectionRetries = 0;
+    this.partnerId = null;
+    
+    // Remove from private room if in one
+    if (this.currentRoomCode) {
+      const roomUsers = this.privateRooms.get(this.currentRoomCode) || [];
+      const updatedUsers = roomUsers.filter(id => id !== this.currentUserId);
+      
+      if (updatedUsers.length > 0) {
+        this.privateRooms.set(this.currentRoomCode, updatedUsers);
+      } else {
+        // Room is empty, remove it
+        this.privateRooms.delete(this.currentRoomCode);
+      }
+      
+      this.currentRoomCode = null;
+    }
     
     if (this.callbacks['disconnect']) {
       this.callbacks['disconnect'].forEach(callback => callback());
@@ -149,7 +224,42 @@ export class MockSocket {
       );
     }
     
-    // Simulate connection attempt with potential failure
+    // If in a private room, check if there's another user
+    if (this.currentRoomCode) {
+      const roomUsers = this.privateRooms.get(this.currentRoomCode) || [];
+      const otherUsers = roomUsers.filter(id => id !== this.currentUserId);
+      
+      if (otherUsers.length > 0) {
+        // Found another user in the room
+        this.partnerId = otherUsers[0];
+        this.isConnecting = false;
+        
+        if (this.callbacks['partner-found']) {
+          this.callbacks['partner-found'].forEach(callback => 
+            callback({
+              id: this.partnerId,
+              temporaryName: generateTemporaryName()
+            })
+          );
+        }
+        return;
+      }
+      
+      // No one else in the room
+      if (this.callbacks['connection-status']) {
+        this.callbacks['connection-status'].forEach(callback => 
+          callback({
+            type: 'info',
+            message: 'Waiting for someone to join the private room...'
+          })
+        );
+      }
+      
+      this.isConnecting = false;
+      return;
+    }
+    
+    // Simulate connection attempt with potential failure for random chat
     setTimeout(() => {
       // Random chance to fail connection attempt (for demo purposes)
       const connectionSuccess = Math.random() > 0.3; // 70% success rate

@@ -130,7 +130,9 @@ export function useChatSocketHandlers(
           ]
         }));
         
-        // Force find a partner when joining a room
+        // Don't automatically force find a partner when joining a room
+        // The MockSocket will determine if there's another user in the room
+        // and trigger partner-found event if appropriate
         setTimeout(() => newSocket.findPartner(), 1000);
       } else {
         toast.error(data.error || "Failed to join private room. Please check the code and try again.");

@@ -72,6 +72,9 @@ const ChatWindow = ({
     }
   };
 
+  // Check if in private room or has partner (allow typing in private room even without partner)
+  const canType = privateRoom || partnerName;
+  
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] bg-gradient-to-b from-background to-background/80">
       <div className="flex justify-between items-center px-6 py-3 bg-card/50 backdrop-blur-sm border-b border-border/50 shadow-sm">
@@ -85,7 +88,11 @@ const ChatWindow = ({
             )}
           </h2>
           <p className="text-xs text-muted-foreground">
-            {partnerName ? "Your identity is hidden" : "Waiting for connection..."}
+            {partnerName ? 
+              "Your identity is hidden" : 
+              privateRoom ? 
+                "Waiting for someone to join..." : 
+                "Waiting for connection..."}
           </p>
         </div>
         {partnerName && (
@@ -158,13 +165,13 @@ const ChatWindow = ({
             value={input}
             onChange={handleInputChange}
             onKeyPress={handleKeyPress}
-            placeholder="Type a message..."
+            placeholder={canType ? "Type a message..." : "Waiting for connection..."}
             className="chat-input focus:ring-primary/50 transition-all duration-200"
-            disabled={!partnerName}
+            disabled={!canType}
           />
           <Button 
             onClick={handleSendMessage} 
-            disabled={!input.trim() || !partnerName}
+            disabled={!input.trim() || !canType}
             className="rounded-full bg-anony-primary hover:bg-anony-primary/80 shadow-md hover:shadow-lg transition-all duration-200 hover:translate-y-[-2px]"
           >
             <Send className="h-4 w-4" />
