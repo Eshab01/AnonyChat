@@ -259,21 +259,38 @@ export class MockSocket {
       return;
     }
     
-    // Simulate connection attempt with potential failure for random chat
+    // Fix: Simulate connection with random partner rather than self connection
+    // Previously we were just generating a partner ID without using a pool of real partners
     setTimeout(() => {
+      // Create a mock pool of users to simulate random connections
+      const mockUserPool = [
+        { id: 'user1', name: generateTemporaryName() },
+        { id: 'user2', name: generateTemporaryName() },
+        { id: 'user3', name: generateTemporaryName() },
+        { id: 'user4', name: generateTemporaryName() },
+        { id: 'user5', name: generateTemporaryName() }
+      ];
+      
+      // Filter out the current user from the pool to avoid self-connection
+      const availableUsers = mockUserPool.filter(user => user.id !== this.currentUserId);
+      
       // Random chance to fail connection attempt (for demo purposes)
       const connectionSuccess = Math.random() > 0.3; // 70% success rate
       
-      if (connectionSuccess) {
+      if (connectionSuccess && availableUsers.length > 0) {
+        // Pick a random user from the pool
+        const randomUserIndex = Math.floor(Math.random() * availableUsers.length);
+        const randomUser = availableUsers[randomUserIndex];
+        
         // Connection successful
-        this.partnerId = generateId();
+        this.partnerId = randomUser.id;
         this.isConnecting = false;
         
         if (this.callbacks['partner-found']) {
           this.callbacks['partner-found'].forEach(callback => 
             callback({
               id: this.partnerId,
-              temporaryName: generateTemporaryName()
+              temporaryName: randomUser.name
             })
           );
         }
